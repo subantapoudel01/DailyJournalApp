@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using DailyJournalApp.Services;
 
 namespace DailyJournalApp
 {
@@ -21,6 +22,7 @@ namespace DailyJournalApp
     		builder.Logging.AddDebug();
 #endif
 
+            builder.Services.AddSingleton<DatabaseService>();
             return builder.Build();
         }
     }
