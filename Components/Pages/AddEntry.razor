@@ -68,17 +68,49 @@
 
     private async Task SaveEntry()
     {
-        // One entry per day rule (Only check if we are creating a NEW entry)
+        // 1. Check if we are trying to create a NEW entry (Id is 0)
         if (Id == 0)
         {
-            var existingDate = await DbService.GetEntryByDateAsync(entryModel.Date);
-            if (existingDate != null)
+            // 2. Check if an entry already exists for this specific date
+            var existing = await DbService.GetEntryByDateAsync(entryModel.Date);
+
+            if (existing != null)
             {
-                // If entry exists for this date, switch to Edit mode automatically
-                entryModel.Id = existingDate.Id;
+                // 3. ASK THE USER what to do
+                string action = await Application.Current.MainPage.DisplayActionSheet(
+                    $"Entry exists for {entryModel.Date:MMM dd}",
+                    "Cancel",
+                    null,
+                    "Combine (Add to bottom)",
+                    "Overwrite (Replace entirely)");
+
+                if (action == "Combine (Add to bottom)")
+                {
+                    // LOGIC: Merge old content + new content
+                    existing.Content = existing.Content + "\n\n----------------\n" + entryModel.Content;
+
+                    // (Optional) You could also merge moods or titles if you wanted
+                    // existing.Title = existing.Title + " & " + entryModel.Title;
+
+                    await DbService.SaveEntryAsync(existing);
+                    NavManager.NavigateTo("/");
+                    return;
+                }
+                else if (action == "Overwrite (Replace entirely)")
+                {
+                    // LOGIC: Reuse the ID but replace all data with new inputs
+                    entryModel.Id = existing.Id;
+                    // We proceed to the normal save line below...
+                }
+                else
+                {
+                    // User clicked Cancel
+                    return;
+                }
             }
         }
 
+        // Normal Save (For new entries OR Overwrite)
         await DbService.SaveEntryAsync(entryModel);
         NavManager.NavigateTo("/");
     }
